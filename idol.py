@@ -64,18 +64,21 @@ def get_faces(hashtag, image_limit, save_whole_img = False):
     sponsor_list = []
     for i, tweet in enumerate(cursor.items(limit=image_limit)):
         media = tweet.entities.get("media")
+        # print(media)
         if media is not None:
             media_url = media[0]['media_url_https']+":large"
             send_data = {'apikey': _key, 'url': media_url}
             req = requests.post(hp_url, data = send_data)
             face_dict = json.loads(req.text)
-            print(face_dict['face'])
-            original_image = io.BytesIO(urllib.request.urlopen(media_url).read())
+            # print(face_dict['face'])
+            image_buffer = io.BytesIO(urllib.request.urlopen(media_url).read())
+            original_image = Image.open(image_buffer)
             draw = ImageDraw.Draw(original_image)
-            if save_whole_img:
-                original_name = hashtag+'-'+str(i)+'.jpg'
+            original_name = hashtag+'-'+str(i)+'.jpg'
+            if save_whole_img:    
                 original_image.save(os.path.join(save_folder, original_name))
             for j, face in enumerate(face_dict['face']):
+                print(face)
                 width, left, top, height = face['width'] , face['left'], face['top'], face['height']
 
                 cut_left = int(left - (width*0.1))
@@ -83,19 +86,19 @@ def get_faces(hashtag, image_limit, save_whole_img = False):
                 cut_right = int(left + (width*1.1))
                 cut_bottom = int(top + (height*1.1))
                 cut_top = int(top - (height * 0.1))
-
-                croped_sample = draw.rectangle((cut_left, cut_top, cut_right, cut_bottom))
+                print(cut_left, cut_top, cut_right, cut_bottom)
+                croped_sample = original_image.crop((cut_left, cut_top, cut_right, cut_bottom))
                 croped_name = _add_face_num(original_name, j)
                 croped_path = os.path.join(save_folder, croped_name)
                 croped_sample.save(croped_path)
 
 
 def hash_sponsors(hashtag, image_limit, image_type = 'complex_3d'):
-    save_file = "#"+hashtag+"-sponsors"
+    save_file = hashtag+"-sponsors"
     _ensure_folder(save_file)
 
     hp_url = 'https://api.idolondemand.com/1/api/sync/recognizeimages/v1'
-    auth = authorize()
+    auth = _authorize()
     api = tweepy.API(auth)
 
     cursor = tweepy.Cursor(api.search, q=hashtag, count=image_limit, lang='en')
@@ -130,5 +133,20 @@ def hash_sponsors(hashtag, image_limit, image_type = 'complex_3d'):
 
 if __name__ == '__main__':
     # hash_sponsors('AH8', 300)
-    # get_faces('AH8', 300, save_whole_img = True)
-    draw_faces(os.path.join('#AH8-faces', 'AH8-26.jpg'))
+    get_faces('AH8', 100, save_whole_img=True)
+    # draw_faces(os.path.join('#AH8-faces', 'AH8-26.jpg'))
+
+    # print("Hi! Welcome to IDOL Twitter, what do you want to do?")
+    # print("1- Get the Sponsors of a given hash")
+    # print("2- Get the faces of a particular hash")
+    # print("3- Draw the face rectangle of a given file")
+
+    # choice = input()
+    # if choice == "1":
+    #     hashtag = input("Insert the hashtag you want to search for: ")
+    #     hash_sponsors(hashtag, 400)
+    # elif choice == "2":
+    #     hashtag = input("Insert the hashtag you want to search for: ")
+    #     get_faces(hashtag, 400)
+    # elif choice == "3":
+    #     hashtag = input("Insert the hashtag you want to search for: ")
